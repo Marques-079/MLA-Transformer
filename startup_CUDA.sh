@@ -10,7 +10,7 @@ pip install -r requirements_CUDA.txt
 python MHA/main_124.py
 
 
-: '
+
 #local /Users/marcus/Documents/GitHub/MLA-Transformer SIDE nano ~/.ssh/config
 Host lambda-gpu
     HostName 209.20.159.97
@@ -30,6 +30,14 @@ Host github.com
   User git
   IdentityFile ~/.ssh/id_ed25519
   IdentitiesOnly yes
-'
+
+#Copy SSH Key to remote server CHANGE INSTANCE unbuntu@xxx
+scp ~/.ssh/id_ed25519 ubuntu@161.153.48.113:~/.ssh/
+
+#Authenticate GitHub SSH
+ssh -T git@github.com
+
+
+
 
 
