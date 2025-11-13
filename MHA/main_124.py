@@ -207,7 +207,7 @@ class DataLoaderLite:
         return x, y
 
 if __name__ == '__main__':
-    device = ("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
+    device = ("cuda" if torch.backends.mps.is_available() else "mps" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(1337)
     if torch.backends.mps.is_available():
         torch.mps.manual_seed(1337)
@@ -216,7 +216,9 @@ if __name__ == '__main__':
 
     start = time.perf_counter()
 
-    train_loader = DataLoaderLite(B=4, T=32)
+    train_loader = DataLoaderLite(B=16, T=1024)
+    torch.set_float32_matmul_precision('high')
+
     model = GPT(GPTConfig())
     model = model.to(device)
     print(device)
@@ -233,15 +235,19 @@ if __name__ == '__main__':
         logits, loss = model(x, y)
         loss.backward()
         optimizer.step()
-        
+        torch.cuda.synchronize(device)
+
         # After training step
         new_w = model.lm_head.weight.clone().detach()
 
         diff = (new_w - old_w).abs().mean()
         print(f"Average parameter update magnitude: {diff.item():.6e}")
-
         print(f"Step {i}, loss: {loss.item()}")
- 
+
+        tokens_per_sec = (train_loader.B * train_loader.T) / (time.perf_counter() - start)
+        print(f"Tokens per second: {tokens_per_sec:.2f}")
+
+
     import sys; sys.exit(0)
 
     # while x.size(1) < max_length:
