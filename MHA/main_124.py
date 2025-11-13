@@ -207,14 +207,18 @@ class DataLoaderLite:
         return x, y
 
 if __name__ == '__main__':
-    device = ("cuda" if torch.backends.mps.is_available() else "mps" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        device = "mps"
+
+        device = "cpu"
+
     torch.manual_seed(1337)
     if torch.backends.mps.is_available():
         torch.mps.manual_seed(1337)
     elif torch.cuda.is_available():
         torch.cuda.manual_seed(1337)
-
-    start = time.perf_counter()
 
     train_loader = DataLoaderLite(B=16, T=1024)
     torch.set_float32_matmul_precision('high')
@@ -225,6 +229,7 @@ if __name__ == '__main__':
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, foreach=False)
     for i in range(50):
+        start = time.perf_counter()
         x, y = train_loader.next_batch()
         x, y = x.to(device), y.to(device)
         optimizer.zero_grad()
@@ -232,11 +237,16 @@ if __name__ == '__main__':
         # Before training step
         old_w = model.lm_head.weight.clone().detach()
 
-        logits, loss = model(x, y)
+        #Temporary dtype swap for ops -> Faster computation with minimal loss to precision
+        with torch.autocast(device_type=device, dtype=torch.bfloat16):
+            logits, loss = model(x, y)
         loss.backward()
         optimizer.step()
+
+
         torch.cuda.synchronize(device)
 
+        end = time.perf_counter()
         # After training step
         new_w = model.lm_head.weight.clone().detach()
 
@@ -244,7 +254,7 @@ if __name__ == '__main__':
         print(f"Average parameter update magnitude: {diff.item():.6e}")
         print(f"Step {i}, loss: {loss.item()}")
 
-        tokens_per_sec = (train_loader.B * train_loader.T) / (time.perf_counter() - start)
+        tokens_per_sec = (train_loader.B * train_loader.T) / (end - start)
         print(f"Tokens per second: {tokens_per_sec:.2f}")
 
 
