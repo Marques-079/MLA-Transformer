@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#setpup
 ssh ubuntu@<NEW_IP> -i ~/.ssh/gpt2    # CHANGE IP 
 cd ~
 git clone git@github.com:Marques-079/MLA-Transformer.git
@@ -12,7 +13,7 @@ python MHA/main_124.py
 
 #local /Users/marcus/Documents/GitHub/MLA-Transformer SIDE nano ~/.ssh/config
 Host lambda-gpu
-    HostName 209.20.159.97
+    HostName <INSTANCE_IP>
     User ubuntu
     IdentityFile ~/.ssh/id_ed25519
     ForwardAgent yes
@@ -30,8 +31,10 @@ Host github.com
   IdentityFile ~/.ssh/id_ed25519
   IdentitiesOnly yes
 
+
+#BAD BAD NEXT TIME DO NOT DO 
 #Copy SSH Key to remote server CHANGE INSTANCE unbuntu@xxx
-scp ~/.ssh/id_ed25519 ubuntu@161.153.48.113:~/.ssh/
+scp ~/.ssh/id_ed25519 ubunut@XXXXXXXXXX:~/.ssh/
 
 #Authenticate GitHub SSH
 ssh -T git@github.com
