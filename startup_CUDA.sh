@@ -10,7 +10,6 @@ pip install -r requirements_CUDA.txt
 python MHA/main_124.py
 
 
-
 #local /Users/marcus/Documents/GitHub/MLA-Transformer SIDE nano ~/.ssh/config
 Host lambda-gpu
     HostName 209.20.159.97
@@ -36,6 +35,15 @@ scp ~/.ssh/id_ed25519 ubuntu@161.153.48.113:~/.ssh/
 
 #Authenticate GitHub SSH
 ssh -T git@github.com
+
+#Make + Boot VENV -> Ensure that venv is in gitignore
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements_CUDA.txt
+pip freeze > requirements_CUDA.txt #optional for overwriting requirements file
+
+#Monitor GPU usage
+nvidia-smi --loop-ms=200
 
 
 
