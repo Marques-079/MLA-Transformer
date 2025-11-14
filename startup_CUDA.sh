@@ -3,12 +3,12 @@
 #setpup
 ssh ubuntu@<NEW_IP> -i ~/.ssh/gpt2    # CHANGE IP 
 cd ~
-git clone git@github.com:Marques-079/MLA-Transformer.git
+git clone git@github.com:USERNAME/REPO.git
 cd MLA-Transformer
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements_CUDA.txt
-python MHA/main_124.py
+python prototype/main_124.py
 
 
 #local /Users/marcus/Documents/GitHub/MLA-Transformer SIDE nano ~/.ssh/config

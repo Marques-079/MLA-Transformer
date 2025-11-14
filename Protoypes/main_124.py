@@ -254,10 +254,10 @@ if __name__ == '__main__':
     grad_accum_steps = total_batch_size // (B * T)
     print(f"Using gradient accumulation steps: {grad_accum_steps}")
 
-    train_loader = DataLoaderLite(B=16, T=1024)
+    train_loader = DataLoaderLite(B=B, T=T)
     torch.set_float32_matmul_precision('high')
 
-    model = GPT(GPTConfig(vocab_size=50304))
+    model = GPT(GPTConfig(vocab_size=503048))
     model = model.to(device)
     model = torch.compile(model)  
     print(device)
@@ -318,6 +318,26 @@ if __name__ == '__main__':
         print(f"Step {step:4d} | loss: {loss_accum.item():.6f} | lr: {lr:.4e} | tokens/sec: {tokens_per_sec:.2f} | norm: {norm:.2f} | time: {time_taken * 1000} seconds")
 
     import sys; sys.exit(0)
+
+    # while x.size(1) < max_length:
+    #     with torch.no_grad():
+    #         logits = model(x)                      
+    #         logits = logits[:, -1, :]                
+
+    #         probs = F.softmax(logits, dim=-1)     
+    #         topk_probs, topk_indices = torch.topk(probs, 50, dim=-1)
+
+    #         ix = torch.multinomial(topk_probs, 1) 
+    #         xcol = torch.gather(topk_indices, -1, ix) 
+    #         x = torch.cat((x, xcol), dim=1)           
+
+    # for i in range(num_return_sentences):
+    #     tokens = x[i, :max_length].tolist()
+    #     decoded = enc.decode(tokens)
+    #     print(">", decoded)
+    # end = time.perf_counter()
+    # print(f"\nTime taken to generate: {end - start:.2f} seconds")
+
 
 
 
