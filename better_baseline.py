@@ -354,7 +354,7 @@ def get_lr(it):
 ckpt_dir = "checkpoints"
 os.makedirs(ckpt_dir, exist_ok=True)
 
-# pick 10 steps evenly from [1, max_steps-1]
+# pick 5 steps evenly from [1, max_steps-1]
 save_steps = set(np.linspace(1, max_steps - 1, 10, dtype=int).tolist())
 
 def save_ckpt(step, model, optimizer, extra_tag=None):
