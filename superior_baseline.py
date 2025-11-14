@@ -320,8 +320,12 @@ val_loader   = DataLoaderLite(B=B, T=T, process_rank=ddp_rank, num_processes=ddp
 
 torch.set_float32_matmul_precision('high')
 
-#Create and compile parallel processes + model
+
+max_steps_total = 19536                    
+resume_ckpt = "checkpoints/step009535.pt"   
+
 model = GPT(GPTConfig(vocab_size=50304))
+
 model.to(device)
 
 print(f"Using device: {device}")
@@ -334,14 +338,15 @@ raw_model = model.module if ddp else model
 max_lr = 6e-4
 min_lr = max_lr * 0.1
 warmup_steps = 357
-max_steps = 9536
+max_steps = max_steps_total   # <-- now 19_536
+
 def get_lr(it):
     if it < warmup_steps:
         return max_lr * (it + 1) / warmup_steps
     if it > max_steps:
         return min_lr
     decay_ratio = (it - warmup_steps) / (max_steps - warmup_steps)
-    assert 0 <= decay_ratio <= 1
+    decay_ratio = max(0.0, min(1.0, decay_ratio))  # clamp just in case
     coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))
     return min_lr + coeff * (max_lr - min_lr)
 
@@ -351,6 +356,7 @@ os.makedirs(ckpt_dir, exist_ok=True)
 
 # pick 10 steps evenly from [1, max_steps-1]
 save_steps = set(np.linspace(1, max_steps - 1, 10, dtype=int).tolist())
+
 
 def save_ckpt(step, model, optimizer, extra_tag=None):
     raw = model.module if isinstance(model, DDP) else model
@@ -370,16 +376,30 @@ def save_weights_only(model, filename):
     raw = model.module if isinstance(model, DDP) else model
     torch.save(raw.state_dict(), os.path.join(ckpt_dir, filename))
 
-# Get device type for autocast and optimizer (cuda, cpu, or mps)
 device_type = device.split(':')[0] if ':' in device else device
 
-#optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas = (0.9, 0.95), eps = 1e-8)
-optimizer = raw_model.configure_optimizers(weight_decay=0.1, learning_rate=6e-4, device_type=device_type)
+optimizer = raw_model.configure_optimizers(
+    weight_decay=0.1,
+    learning_rate=6e-4,
+    device_type=device_type,
+)
+
+start_step = 0
+if resume_ckpt is not None:
+    ckpt = torch.load(resume_ckpt, map_location=device)
+    raw_model.load_state_dict(ckpt["model"])
+    optimizer.load_state_dict(ckpt["optimizer"])
+    start_step = ckpt["step"] + 1
+    if master_process:
+        print(f"Resuming from {resume_ckpt} at step {start_step}")
+    if ddp:
+        dist.barrier()
+
 interrupted = False
-step = -1  # so we have a valid step value even if interrupted very early
+step = start_step - 1  
 
 try:
-    for step in range(max_steps):
+    for step in range(start_step, max_steps):
         start = time.perf_counter()
 
         # ---------------- Validation ----------------

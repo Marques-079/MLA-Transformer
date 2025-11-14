@@ -43,6 +43,8 @@ ssh -T git@github.com
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements_CUDA.txt
+#INSTALL NUMPY
+#INSTALL TIKTOKEN
 pip freeze > requirements_CUDA.txt #optional for overwriting requirements file
 
 #Monitor GPU usage
