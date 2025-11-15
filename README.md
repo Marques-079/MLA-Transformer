@@ -75,6 +75,14 @@ pros:
 cons: 
 - Perplexity (PPL) was consistently worse than both GPT-2 baselines
 - LAMBADA accuracy was 2–4% lower, indicating weaker long-range dependency modeling.
+
+---
+
+<div>
+  <img src="https://github.com/Marques-079/MLA-Transformer/blob/4674b67281de4219458726ad4a603465e52d05a2/evals_summary.png"
+       alt="Figure 3"
+       width="90%" />
+</div>
   
 ---
 ## Improvements 📝📘
