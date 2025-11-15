@@ -269,7 +269,7 @@ def render_example(example):
 #                     LOAD MLA CHECKPOINT
 # ============================================================
 
-CKPT_PATH = "step019535.pt"  # change if needed
+CKPT_PATH = "step019535.pt"  
 
 def load_mla_model(device: str) -> GPT:
     print(f"Loading MLA checkpoint from {CKPT_PATH}...")
@@ -287,7 +287,6 @@ def load_mla_model(device: str) -> GPT:
 
 @torch.no_grad()
 def evaluate_mla():
-    # Device selection (same style as in HF script)
     if torch.cuda.is_available():
         device = "cuda"
     elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
@@ -310,25 +309,23 @@ def evaluate_mla():
         tokens = tokens.to(device)
         mask = mask.to(device)
 
-        # Forward through your GPT (returns logits, loss)
-        logits, _ = model(tokens)  # (4, T, vocab)
+        logits, _ = model(tokens)  
 
-        # Same shifting logic as HF evaluation
-        shift_logits = logits[..., :-1, :].contiguous()   # (4, T-1, V)
-        shift_tokens = tokens[..., 1:].contiguous()       # (4, T-1)
+        shift_logits = logits[..., :-1, :].contiguous()   
+        shift_tokens = tokens[..., 1:].contiguous()       
 
         losses = F.cross_entropy(
             shift_logits.view(-1, shift_logits.size(-1)),
             shift_tokens.view(-1),
             reduction="none",
-        ).view(tokens.size(0), -1)  # (4, T-1)
+        ).view(tokens.size(0), -1) 
 
-        shift_mask = mask[..., 1:].contiguous()  # (4, T-1)
+        shift_mask = mask[..., 1:].contiguous() 
         masked_losses = losses * shift_mask
 
         # Sum over only ending tokens
-        sum_loss = masked_losses.sum(dim=1)               # (4,)
-        avg_loss = sum_loss / shift_mask.sum(dim=1)       # (4,)
+        sum_loss = masked_losses.sum(dim=1)              
+        avg_loss = sum_loss / shift_mask.sum(dim=1)       
 
         pred = sum_loss.argmin().item()       # unnormalized total loss
         pred_norm = avg_loss.argmin().item()  # normalized by length
@@ -351,11 +348,6 @@ def evaluate_mla():
     print(f"Accuracy (normalized): {acc_norm:.4f}")
     print("===============================================")
 
-# ============================================================
-#                           MAIN
-# ============================================================
-
 if __name__ == "__main__":
     evaluate_mla()
-    # If you want a quick sanity generation, uncomment:
-    # device = "cuda" if torch.cuda.is_available() else ("mps" if ha_
+

@@ -1,0 +1,93 @@
+{
+  "MLA": {
+    "WikiText2_PPL": 66.66688727142414,
+    "LAMBADA_PPL": 46.934200359976565,
+    "LAMBADA_ACC": 0.39611650485436894,
+    "HellaSwag_ACC": 0.30229083665338646,
+    "Forward_TokensPerSec": 9634.3182997755,
+    "Generation_TokensPerSec": 56.87372516806055
+  },
+  "FineWeb_124M": {
+    "WikiText2_PPL": 59.46189266613803,
+    "LAMBADA_PPL": 42.47057027124309,
+    "LAMBADA_ACC": 0.4184466019417476,
+    "HellaSwag_ACC": 0.3092629482071713,
+    "Forward_TokensPerSec": 8483.561002141952,
+    "Generation_TokensPerSec": 54.72935819199553
+  },
+  "GPT2_124M": {
+    "WikiText2_PPL": 46.823244934109084,
+    "LAMBADA_PPL": 37.89904774655813,
+    "LAMBADA_ACC": 0.43398058252427185,
+    "HellaSwag_ACC": 0.30278884462151395,
+    "Forward_TokensPerSec": 8483.694557609244,
+    "Generation_TokensPerSec": 57.12775294020627
+  }
+}
+
+
+============================================================
+Benchmarking model: MLA
+============================================================
+  Warmup...
+  Benchmarking...
+    Run 1/5: TTFT = 30.4 ms, Total = 8.134 s
+    Run 2/5: TTFT = 38.7 ms, Total = 2.632 s
+    Run 3/5: TTFT = 42.8 ms, Total = 2.406 s
+    Run 4/5: TTFT = 35.5 ms, Total = 2.344 s
+    Run 5/5: TTFT = 36.4 ms, Total = 2.447 s
+
+  === Averages ===
+  Avg TTFT           : 36.8 ms
+  Avg total time     : 3.593 s for 64 tokens
+  Avg tokens/sec     : 17.8 tokens/s
+
+============================================================
+Benchmarking model: FineWeb_124M (MHA)
+============================================================
+  Warmup...
+  Benchmarking...
+    Run 1/5: TTFT = 49.8 ms, Total = 5.457 s
+    Run 2/5: TTFT = 44.9 ms, Total = 2.717 s
+    Run 3/5: TTFT = 43.4 ms, Total = 2.688 s
+    Run 4/5: TTFT = 48.1 ms, Total = 2.700 s
+    Run 5/5: TTFT = 40.2 ms, Total = 2.702 s
+
+  === Averages ===
+  Avg TTFT           : 45.3 ms
+  Avg total time     : 3.253 s for 64 tokens
+  Avg tokens/sec     : 19.7 tokens/s
+
+============================================================
+Benchmarking model: GPT2_124M (MHA)
+============================================================
+  Warmup...
+  Benchmarking...
+    Run 1/5: TTFT = 38.5 ms, Total = 2.944 s
+    Run 2/5: TTFT = 42.2 ms, Total = 2.974 s
+    Run 3/5: TTFT = 44.5 ms, Total = 3.054 s
+    Run 4/5: TTFT = 40.5 ms, Total = 2.686 s
+    Run 5/5: TTFT = 41.0 ms, Total = 2.645 s
+
+  === Averages ===
+  Avg TTFT           : 41.3 ms
+  Avg total time     : 2.861 s for 64 tokens
+  Avg tokens/sec     : 22.4 tokens/s
+
+================ FINAL INFERENCE SPEED SUMMARY ================
+
+MLA:
+  Avg TTFT         : 36.8 ms
+  Avg total time   : 3.593 s for 64 tokens
+  Avg tokens/sec   : 17.8 tokens/s
+
+FineWeb_124M (MHA):
+  Avg TTFT         : 45.3 ms
+  Avg total time   : 3.253 s for 64 tokens
+  Avg tokens/sec   : 19.7 tokens/s
+
+GPT2_124M (MHA):
+  Avg TTFT         : 41.3 ms
+  Avg total time   : 2.861 s for 64 tokens
+  Avg tokens/sec   : 22.4 tokens/s
+===============================================================
