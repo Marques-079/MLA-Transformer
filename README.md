@@ -28,11 +28,6 @@ Disclaimer : Conventionally MLA is applied to large models with specialsied hard
          width="100%" />
   </div>
   <div>
-    <img src="https://github.com/Marques-079/MLA-Transformer/blob/abcc4b2c26702dd44e2235489be2433811a20f6e/evals_summary.png"
-         alt="Figure 3"
-         width="100%" />
-  </div>
-  <div>
     <img src="https://github.com/Marques-079/MLA-Transformer/blob/abcc4b2c26702dd44e2235489be2433811a20f6e/trainingimg.png"
          alt="Figure 3"
          width="100%" />
