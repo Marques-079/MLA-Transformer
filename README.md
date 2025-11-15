@@ -17,6 +17,7 @@ Traditional Multi-Head Attention (MHA) mechanisms in transformer models store fu
 - Reduces **K/V projection FLOPs** and memory bandwidth, especially on **large models** and **long contexts** 📉
 
 Disclaimer : Conventionally MLA is applied to large models with specialsied hardware
+
 ---
 
 ## Image Gallery 📸
@@ -25,12 +26,12 @@ Disclaimer : Conventionally MLA is applied to large models with specialsied hard
   <div>
     <img src="https://github.com/Marques-079/MLA-Transformer/blob/abcc4b2c26702dd44e2235489be2433811a20f6e/losssesfinalg.png"
          alt="Figure 3"
-         width="100%" />
+         width="80%" />
   </div>
   <div>
     <img src="https://github.com/Marques-079/MLA-Transformer/blob/abcc4b2c26702dd44e2235489be2433811a20f6e/trainingimg.png"
          alt="Figure 3"
-         width="100%" />
+         width="80%" />
   </div>
 </div>
 
