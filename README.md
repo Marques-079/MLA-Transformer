@@ -22,24 +22,21 @@ Disclaimer : Conventionally MLA is applied to large models with specialsied hard
 ## Image Gallery 📸
 
 <div align="center">
-  <!-- Top Row: Two Images Side-by-Side -->
-  <div style="display: flex; justify-content: center; gap: 10px;">
+  <div>
     <img src="https://github.com/Marques-079/MLA-Transformer/blob/abcc4b2c26702dd44e2235489be2433811a20f6e/losssesfinalg.png"
-         alt="Figure 1"
-         width="49%" />
-    <img src="https://github.com/Marques-079/MLA-Transformer/blob/abcc4b2c26702dd44e2235489be2433811a20f6e/trainingimg.png"
-         alt="Figure 2"
-         width="49%" />
+         alt="Figure 3"
+         width="100%" />
   </div>
-
-  <br/>
-  <!-- Bottom Row: One Full-Width Image -->
   <div>
     <img src="https://github.com/Marques-079/MLA-Transformer/blob/abcc4b2c26702dd44e2235489be2433811a20f6e/evals_summary.png"
          alt="Figure 3"
          width="100%" />
   </div>
-
+  <div>
+    <img src="https://github.com/Marques-079/MLA-Transformer/blob/abcc4b2c26702dd44e2235489be2433811a20f6e/trainingimg.png"
+         alt="Figure 3"
+         width="100%" />
+  </div>
 </div>
 
 ---
