@@ -1,15 +1,10 @@
-# infer_mla.py
-import os
-import math
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from dataclasses import dataclass
-import argparse
 import tiktoken
 
-
-# ----------------- Model definitions (same as training) ----------------- #
+# ---------------------- Model definition ----------------------
 
 @dataclass
 class GPTConfig:
@@ -19,7 +14,6 @@ class GPTConfig:
     n_head: int = 12
     n_embd: int = 768
 
-
 class MLASelfAttention(nn.Module):
     def __init__(self, config, latent_dim_ratio: float = 0.5):
         super().__init__()
@@ -28,7 +22,7 @@ class MLASelfAttention(nn.Module):
         self.n_embd = config.n_embd
         self.head_dim = config.n_embd // config.n_head
 
-        # Q projection (full dim)
+        # Queries from full emb
         self.q_proj = nn.Linear(config.n_embd, config.n_embd, bias=False)
 
         # Latent compression for K/V
@@ -42,6 +36,8 @@ class MLASelfAttention(nn.Module):
         self.c_proj_out = nn.Linear(config.n_embd, config.n_embd)
         self.c_proj_out.NANOGPT_SCALE_INIT = 1
 
+        # Causal mask buffer (not used directly because we use is_causal=True,
+        # but kept here for compatibility / future use)
         self.register_buffer(
             "bias",
             torch.tril(
@@ -54,26 +50,32 @@ class MLASelfAttention(nn.Module):
         B, T, C = x.size()
         hs = self.head_dim
 
+        # Q from full embeddings
         q = self.q_proj(x)
+
+        # Latent compression for K/V
         c_latent = self.c_proj(x)
         k = self.k_from_c(c_latent)
         v = self.v_from_c(c_latent)
 
-        q = q.view(B, T, self.n_head, hs).transpose(1, 2)  # (B, h, T, hs)
+        # Reshape to heads: (B, T, C) -> (B, n_head, T, head_dim)
+        q = q.view(B, T, self.n_head, hs).transpose(1, 2)
         k = k.view(B, T, self.n_head, hs).transpose(1, 2)
         v = v.view(B, T, self.n_head, hs).transpose(1, 2)
 
+        # Multi-head attention with causal masking
         y = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+
+        # Merge heads back: (B, n_head, T, hs) -> (B, T, C)
         y = y.transpose(1, 2).contiguous().view(B, T, C)
         y = self.c_proj_out(y)
         return y
-
 
 class MLP(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.c_fc = nn.Linear(config.n_embd, 4 * config.n_embd)
-        self.gelu = nn.GELU(approximate="tanh")
+        self.gelu = nn.GELU(approximate='tanh')
         self.c_proj = nn.Linear(4 * config.n_embd, config.n_embd)
         self.c_proj.NANOGPT_SCALE_INIT = 1
 
@@ -82,7 +84,6 @@ class MLP(nn.Module):
         x = self.gelu(x)
         x = self.c_proj(x)
         return x
-
 
 class Block(nn.Module):
     def __init__(self, config):
@@ -97,12 +98,10 @@ class Block(nn.Module):
         x = x + self.mlp(self.ln_2(x))
         return x
 
-
 class GPT(nn.Module):
     def __init__(self, config: GPTConfig):
         super().__init__()
         self.config = config
-
         self.transformer = nn.ModuleDict(
             dict(
                 wte=nn.Embedding(config.vocab_size, config.n_embd),
@@ -113,7 +112,7 @@ class GPT(nn.Module):
         )
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
 
-        # weight tying
+        # Weight tying
         self.transformer.wte.weight = self.lm_head.weight
 
         self.apply(self._init_weights)
@@ -130,147 +129,108 @@ class GPT(nn.Module):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
     def forward(self, idx, targets=None):
+        # idx: (B, T)
         B, T = idx.size()
         assert (
             T <= self.config.block_size
         ), f"Cannot forward sequence of length {T}, block size is only {self.config.block_size}"
 
-        pos = torch.arange(0, T, dtype=torch.long, device=idx.device)
-        pos_emb = self.transformer.wpe(pos)          # (T, C)
-        tok_emb = self.transformer.wte(idx)          # (B, T, C)
-        x = tok_emb + pos_emb                        # broadcast over B
+        # token + positional embeddings
+        pos = torch.arange(0, T, dtype=torch.long, device=idx.device)  # (T,)
+        pos_emb = self.transformer.wpe(pos)  # (T, C)
+        tok_emb = self.transformer.wte(idx)  # (B, T, C)
+        x = tok_emb + pos_emb  # broadcast pos_emb over batch
 
+        # transformer blocks
         for block in self.transformer.h:
             x = block(x)
 
         x = self.transformer.ln_f(x)
-        logits = self.lm_head(x)
+        logits = self.lm_head(x)  # (B, T, vocab_size)
 
         loss = None
         if targets is not None:
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+            loss = F.cross_entropy(
+                logits.view(-1, logits.size(-1)), targets.view(-1)
+            )
         return logits, loss
 
+# ---------------------- Inference utilities ----------------------
 
-# ----------------- Sampling utilities ----------------- #
+# Device selection
+if torch.cuda.is_available():
+    device = "cuda"
+elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+    device = "mps"
+else:
+    device = "cpu"
 
-def generate(model, idx, max_new_tokens, temperature=1.0, top_k=None):
+print(f"Using device: {device}")
+
+# Load checkpoint (change path as needed)
+CKPT_PATH = "step019535.pt"  # or "checkpoints/step00xxxx.pt"
+ckpt = torch.load(CKPT_PATH, map_location="cpu")
+
+# Rebuild config from checkpoint
+config = GPTConfig(**ckpt["config"])
+
+# Build model and load weights
+model = GPT(config)
+model.load_state_dict(ckpt["model"])
+model.to(device)
+model.eval()
+
+print(f"Loaded model from {CKPT_PATH}")
+
+# Tokenizer
+enc = tiktoken.get_encoding("gpt2")
+
+def encode(text: str) -> torch.Tensor:
+    ids = enc.encode(text)
+    return torch.tensor([ids], dtype=torch.long, device=device)
+
+def decode(tokens: torch.Tensor) -> str:
+    if tokens.dim() == 2:
+        tokens = tokens[0]
+    return enc.decode(tokens.tolist())
+
+@torch.no_grad()
+def generate(model, idx, max_new_tokens: int, temperature: float = 1.0, top_k: int | None = None):
     """
-    Autoregressively generate tokens from the model.
-
-    idx: (1, T) LongTensor with starting tokens.
+    idx: (B, T) starting tokens
+    returns: (B, T + max_new_tokens)
     """
     model.eval()
-    device = next(model.parameters()).device
-
     for _ in range(max_new_tokens):
-        # crop to block size
         idx_cond = idx[:, -model.config.block_size :]
 
-        with torch.no_grad():
-            logits, _ = model(idx_cond)
-
+        logits, _ = model(idx_cond)
         logits = logits[:, -1, :] / max(temperature, 1e-8)
 
         if top_k is not None:
             v, _ = torch.topk(logits, top_k)
             logits[logits < v[:, [-1]]] = -float("inf")
 
-        probs = F.softmax(logits, dim=-1)
-        next_token = torch.multinomial(probs, num_samples=1)
+        probs = torch.softmax(logits, dim=-1)
+        next_token = torch.multinomial(probs, num_samples=1)  # (B, 1)
         idx = torch.cat((idx, next_token), dim=1)
 
     return idx
 
-
-# ----------------- Main CLI entry ----------------- #
-
-def main():
-    parser = argparse.ArgumentParser(description="Run inference with MLA GPT checkpoint.")
-    parser.add_argument(
-        "--ckpt",
-        type=str,
-        default="step019535.pt",
-        help="Path to checkpoint (can be full payload or state_dict).",
-    )
-    parser.add_argument(
-        "--prompt",
-        type=str,
-        default="Hello, my name is",
-        help="Prompt text to start generation.",
-    )
-    parser.add_argument(
-        "--max_new_tokens",
-        type=int,
-        default=100,
-        help="Number of new tokens to generate.",
-    )
-    parser.add_argument(
-        "--temperature",
-        type=float,
-        default=1.0,
-        help="Sampling temperature.",
-    )
-    parser.add_argument(
-        "--top_k",
-        type=int,
-        default=50,
-        help="Top-k sampling (set to 0 to disable).",
-    )
-
-    args = parser.parse_args()
-
-    # ----- Device ----- #
-    if torch.cuda.is_available():
-        device = "cuda"
-    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-        device = "mps"
-    else:
-        device = "cpu"
-    print(f"Using device: {device}")
-
-    # ----- Load checkpoint ----- #
-    print(f"Loading checkpoint from {args.ckpt}...")
-    ckpt = torch.load(args.ckpt, map_location=device)
-
-    # Handle both "full payload" and "raw state_dict"
-    if isinstance(ckpt, dict) and "model" in ckpt:
-        state_dict = ckpt["model"]
-        cfg_dict = ckpt.get("config", {})
-        config = GPTConfig(**cfg_dict)
-    else:
-        state_dict = ckpt
-        # default to your training config (GPT-2 124M with padded vocab)
-        config = GPTConfig(vocab_size=50304)
-
-    # ----- Build model & load weights ----- #
-    model = GPT(config)
-    model.load_state_dict(state_dict, strict=True)
-    model.to(device)
-    model.eval()
-
-    # ----- Tokenizer ----- #
-    enc = tiktoken.get_encoding("gpt2")
-
-    # Encode prompt
-    prompt_ids = enc.encode(args.prompt)
-    prompt_tensor = torch.tensor([prompt_ids], dtype=torch.long, device=device)
-
-    # ----- Generate ----- #
-    out_ids = generate(
-        model,
-        prompt_tensor,
-        max_new_tokens=args.max_new_tokens,
-        temperature=args.temperature,
-        top_k=(None if args.top_k <= 0 else args.top_k),
-    )
-
-    # Decode
-    out_text = enc.decode(out_ids[0].tolist())
-    print("\n================== GENERATED TEXT ==================\n")
-    print(out_text)
-    print("\n====================================================\n")
-
+def generate_text(
+    prompt: str,
+    max_new_tokens: int = 100,
+    temperature: float = 0.8,
+    top_k: int | None = 40,
+) -> str:
+    x = encode(prompt)
+    y = generate(model, x, max_new_tokens=max_new_tokens,
+                 temperature=temperature, top_k=top_k)
+    return decode(y)
 
 if __name__ == "__main__":
-    main()
+    prompt = "How many brains does an octopus have?"
+    print("=== PROMPT ===")
+    print(prompt)
+    print("\n=== COMPLETION ===")
+    print(generate_text(prompt))
